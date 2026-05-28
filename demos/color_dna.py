@@ -73,22 +73,35 @@ def analyze(image: Image.Image, n_colors: int):
 
 
 def build() -> gr.Blocks:
+    from demos._ui import render_meta_header
     with gr.Blocks() as demo:
-        gr.Markdown(
-            """
-            ### 🎨 配色 DNA
-
-            上傳一張圖,萃取主色 5-8 種(用 k-means clustering on RGB)。
-            **用途範例**:幫每個案例自動算「主色指紋」,之後可以「按色相搜尋類似案例」。
-            """
+        render_meta_header(
+            icon="🎨",
+            title="配色 DNA",
+            subtitle="把任何圖萃取出主色調 5-8 色,可作為案例的「色彩指紋」用於配色搜尋",
+            tools=[
+                ("scikit-learn KMeans", "RGB 空間 K-means 分群,找出代表色"),
+                ("Pillow + NumPy", "影像縮圖、像素運算、配色條繪製"),
+            ],
+            cost="$0",
+            cost_detail="純本機,無 API 依賴",
+            time="< 1 秒",
+            time_detail="300px 縮圖上跑 k-means",
+            badges=["離線可用", "無 GPU"],
         )
         with gr.Row():
-            with gr.Column(scale=1):
+            with gr.Column(scale=1, elem_classes=["demo-input-pane"]):
+                gr.HTML('<div class="demo-hint">💡 <strong>怎麼玩</strong>:上傳任何圖,AI 自動萃取出主色調 — 可作為案例的「色彩指紋」,或用來找配色相近的其他案例。</div>')
                 inp = gr.Image(type="pil", label="上傳圖片", height=300)
-                n = gr.Slider(3, 10, value=6, step=1, label="幾種主色")
-                btn = gr.Button("分析", variant="primary")
-            with gr.Column(scale=1):
-                out_strip = gr.Image(type="pil", label="配色帶 (按佔比寬度)", height=120)
+                with gr.Accordion("⚙️ 進階設定", open=False, elem_classes=["demo-advanced"]):
+                    n = gr.Slider(3, 10, value=6, step=1, label="萃取幾種主色",
+                                  info="預設 6 色平衡,3-4 色更鮮明,8-10 色更細膩")
+                with gr.Row(elem_classes=["demo-cta"]):
+                    btn = gr.Button("🎨 萃取配色", variant="primary", scale=2)
+            with gr.Column(scale=1, elem_classes=["demo-output-pane"]):
+                gr.Markdown("### 配色帶", elem_classes=["demo-section-title"])
+                out_strip = gr.Image(type="pil", label="按佔比寬度排列", height=120)
+                gr.Markdown("### 主色清單", elem_classes=["demo-section-title"])
                 out_table = gr.Markdown()
 
         btn.click(analyze, inputs=[inp, n], outputs=[out_strip, out_table])

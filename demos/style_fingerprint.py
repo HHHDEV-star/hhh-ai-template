@@ -23,6 +23,8 @@ from PIL import Image
 _MODEL = None
 _PREPROCESS = None
 _DEVICE = None
+_CACHE = None        # 第一次 load 後就 memory 化,後續 reuse
+_CACHE_LOADED = False  # 區分 "沒 cache 檔案" 跟 "還沒 load"
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "embeddings" / "embeddings.sqlite"
 
@@ -35,17 +37,27 @@ def _ensure_model():
     import open_clip
 
     _DEVICE = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"[style_fingerprint] loading CLIP ViT-L/14 on {_DEVICE} ...", flush=True)
     model, _, preprocess = open_clip.create_model_and_transforms(
         "ViT-L-14", pretrained="openai", device=_DEVICE, quick_gelu=True
     )
     model.eval()
     _MODEL, _PREPROCESS = model, preprocess
+    print(f"[style_fingerprint] CLIP loaded", flush=True)
     return _MODEL, _PREPROCESS, _DEVICE
 
 
 def _load_cache():
+    global _CACHE, _CACHE_LOADED
+    if _CACHE_LOADED:
+        return _CACHE
     if not DB_PATH.exists():
+        _CACHE_LOADED = True
         return None
+
+    print(f"[style_fingerprint] loading embeddings from SQLite ...", flush=True)
+    import time
+    t = time.time()
     con = sqlite3.connect(DB_PATH)
     rows = con.execute(
         "SELECT i.hcase_img_id, i.hdesigner_id, i.url, i.embedding, d.name AS designer_name, i.case_style "
@@ -53,6 +65,7 @@ def _load_cache():
     ).fetchall()
     con.close()
     if not rows:
+        _CACHE_LOADED = True
         return None
 
     ids = np.array([r[0] for r in rows], dtype=np.int64)
@@ -75,7 +88,7 @@ def _load_cache():
         fingerprints[k] = avg
         counts[k] = mask.sum()
 
-    return {
+    _CACHE = {
         "image_ids": ids,
         "designer_ids": designer_ids,
         "urls": urls,
@@ -86,6 +99,9 @@ def _load_cache():
         "designer_names": designer_names,
         "counts": counts,
     }
+    _CACHE_LOADED = True
+    print(f"[style_fingerprint] cached {len(rows)} images / {len(unique_dids)} designers in {time.time()-t:.1f}s", flush=True)
+    return _CACHE
 
 
 def encode_image(img: Image.Image) -> np.ndarray:
@@ -202,37 +218,61 @@ def taste_recommend(selected_indices: list[int], gallery_urls: list[str]):
     return header + format_results_md(results)
 
 
-def build() -> gr.Blocks:
-    with gr.Blocks() as demo:
-        gr.Markdown(
-            """
-            ### 👤 設計師風格指紋
+def prewarm() -> None:
+    """啟動時預先載入 CLIP 模型 + SQLite cache,避免首次互動卡頓。"""
+    try:
+        _load_cache()
+        _ensure_model()
+    except Exception as e:
+        print(f"[style_fingerprint] prewarm 失敗 (不影響啟動): {e}", flush=True)
 
-            用 CLIP ViT-L/14 把每位設計師的所有作品圖 embed,取平均當「風格指紋」。
-            兩種找法:**(A) 上傳一張喜歡的圖**,或 **(B) 從案例庫挑喜歡的**。
-            """
+
+def build() -> gr.Blocks:
+    from demos._ui import render_meta_header
+    prewarm()
+    with gr.Blocks() as demo:
+        render_meta_header(
+            icon="👤",
+            title="設計師風格指紋",
+            subtitle="把每位設計師的作品平均成 768 維「風格指紋」,讓使用者用照片或品味測驗找對味設計師",
+            tools=[
+                ("OpenCLIP ViT-L/14 (openai)", "圖片 encoder,將每張作品轉成 768 維 embedding"),
+                ("Apple MPS / CUDA", "GPU 加速推論,單張 ~50ms"),
+                ("Cosine Similarity", "本機向量比對,從 135 位設計師找最對味"),
+            ],
+            cost="$0",
+            cost_detail="模型本機跑,57,833 張 embedding 已 cache 在 SQLite",
+            time="~1 秒",
+            time_detail="cache 載一次後查詢即時",
+            badges=["離線可用", "MPS 加速", "57k 圖 cache"],
         )
         with gr.Tabs():
             # ----- Tab A -----
             with gr.Tab("📸 上傳圖找設計師"):
+                gr.HTML('<div class="demo-hint">💡 <strong>怎麼玩</strong>:上傳一張你喜歡的居家照片,AI 比對 135 位設計師作品的「風格指紋」,推薦最對味的 5 位設計師。</div>')
                 with gr.Row():
-                    with gr.Column(scale=1):
+                    with gr.Column(scale=1, elem_classes=["demo-input-pane"]):
                         in_img = gr.Image(type="pil", label="上傳你喜歡的居家照片", height=320)
-                        btn = gr.Button("🔍 找對味設計師", variant="primary")
-                    with gr.Column(scale=2):
+                        with gr.Row(elem_classes=["demo-cta"]):
+                            btn = gr.Button("🔍 找對味設計師", variant="primary", scale=2)
+                    with gr.Column(scale=2, elem_classes=["demo-output-pane"]):
+                        gr.Markdown("### 推薦設計師", elem_classes=["demo-section-title"])
                         out_md = gr.Markdown()
                 btn.click(handle_upload, in_img, out_md)
 
             # ----- Tab B -----
-            with gr.Tab("🎨 品味測驗 (選喜歡的圖)"):
-                gr.Markdown("從下方隨機抽出的 30 張案例中,**點擊**你喜歡的(可多選),按底下按鈕推薦。")
+            with gr.Tab("🎨 品味測驗"):
+                gr.HTML('<div class="demo-hint">💡 <strong>怎麼玩</strong>:從下方 30 張隨機案例中,點選你喜歡的(可多選),系統會把這些圖平均成你的「品味指紋」,推薦最對味設計師。</div>')
                 state_selected = gr.State([])
                 state_urls = gr.State([])
-                gallery = gr.Gallery(label="點圖加入 / 取消", columns=6, height=480, object_fit="cover")
+                gallery = gr.Gallery(label="點圖加入 / 取消選擇", columns=6, height=480, object_fit="cover")
                 with gr.Row():
-                    refresh_btn = gr.Button("🔄 換一批")
-                    reco_btn = gr.Button("💡 看推薦", variant="primary")
-                    clear_btn = gr.Button("🧹 清空已選")
+                    with gr.Column(elem_classes=["demo-cta"]):
+                        reco_btn = gr.Button("💡 看 AI 推薦", variant="primary")
+                    with gr.Column(elem_classes=["demo-secondary"]):
+                        refresh_btn = gr.Button("🔄 換一批")
+                    with gr.Column(elem_classes=["demo-secondary"]):
+                        clear_btn = gr.Button("🧹 清空已選")
                 selected_label = gr.Markdown("**已選 0 張**")
                 out_md_b = gr.Markdown()
 
