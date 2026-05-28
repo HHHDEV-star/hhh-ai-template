@@ -1,16 +1,16 @@
 """設計師風格指紋 — 接 hhh.com.tw 真實 _hdesigner + _hcase 資料。
 
-兩個 Tab:
-  (A) 上傳一張你喜歡的圖 → 找最對味的設計師
-  (B) 品味測驗 → 從 30 張隨機案例圖選喜歡的 → 推薦設計師
+上傳一張你喜歡的圖,跟 135 位設計師的「風格指紋」(作品平均向量) 比對,
+找出最對味的前 5 位設計師。
 
 前置:必須先跑 `python scripts/build_embeddings.py` 建好 cache。
+
+註:之前有的「品味測驗」Tab 已移除 (與 🧬 風格 DNA Tinder 重複)。
+要做品味測驗請去 dna_tinder demo。
 """
 
 from __future__ import annotations
 
-import io
-import random
 import sqlite3
 from pathlib import Path
 from typing import List, Tuple
@@ -172,52 +172,6 @@ def handle_upload(image: Image.Image):
     return format_results_md(results)
 
 
-# ===== Tab B: 品味測驗 =====
-def sample_taste_test_images(cache: dict, n: int = 30) -> List[str]:
-    """從 cache 隨機抽 n 張圖當「品味測驗」題目,盡量平均自不同設計師。"""
-    urls_by_d: dict[int, List[str]] = {}
-    for did, url in zip(cache["designer_ids"].tolist(), cache["urls"].tolist()):
-        urls_by_d.setdefault(int(did), []).append(str(url))
-    picks: List[str] = []
-    rng = random.Random(42)  # 固定種子讓初始顯示穩定
-    dids = list(urls_by_d.keys())
-    rng.shuffle(dids)
-    i = 0
-    while len(picks) < n and dids:
-        did = dids[i % len(dids)]
-        if urls_by_d[did]:
-            picks.append(rng.choice(urls_by_d[did]))
-        i += 1
-        if i > n * 10:
-            break
-    return picks[:n]
-
-
-def taste_recommend(selected_indices: list[int], gallery_urls: list[str]):
-    if not selected_indices:
-        return "請至少選 3 張喜歡的圖"
-    cache = _load_cache()
-    if cache is None:
-        return f"⚠ 找不到 embedding cache,請先跑 build script"
-    # 從 cache 找這些 URL 對應的 embedding
-    url_to_idx = {str(u): i for i, u in enumerate(cache["urls"])}
-    picked_embs = []
-    for idx in selected_indices:
-        if 0 <= idx < len(gallery_urls):
-            url = gallery_urls[idx]
-            if url in url_to_idx:
-                picked_embs.append(cache["embs"][url_to_idx[url]])
-    if not picked_embs:
-        return "選的圖在 cache 找不到對應 embedding"
-    taste_vec = np.stack(picked_embs).mean(axis=0)
-    n = np.linalg.norm(taste_vec)
-    if n > 0:
-        taste_vec = taste_vec / n
-    results = rank_designers(taste_vec.astype(np.float32), cache, top_k=5)
-    header = f"### 根據你選的 {len(picked_embs)} 張圖,推薦這 5 位設計師\n\n"
-    return header + format_results_md(results)
-
-
 def prewarm() -> None:
     """啟動時預先載入 CLIP 模型 + SQLite cache,避免首次互動卡頓。"""
     try:
@@ -233,71 +187,31 @@ def build() -> gr.Blocks:
     with gr.Blocks() as demo:
         render_meta_header(
             icon="👤",
-            title="設計師風格指紋",
-            subtitle="把每位設計師的作品平均成 768 維「風格指紋」,讓使用者用照片或品味測驗找對味設計師",
+            title="設計師風格指紋 — 上傳圖找對味設計師",
+            subtitle="上傳一張你喜歡的居家照片,AI 比對 135 位設計師的「風格指紋」,找出與這張圖最對味的前 5 位設計師",
             tools=[
-                ("OpenCLIP ViT-L/14 (openai)", "圖片 encoder,將每張作品轉成 768 維 embedding"),
-                ("Apple MPS / CUDA", "GPU 加速推論,單張 ~50ms"),
-                ("Cosine Similarity", "本機向量比對,從 135 位設計師找最對味"),
+                ("OpenCLIP ViT-L/14 (openai)", "把上傳圖轉成 768 維 embedding"),
+                ("Designer Fingerprint (cached)", "135 位設計師的作品平均向量,本機 SQLite cache"),
+                ("Cosine Similarity", "本機向量比對,即時排序"),
             ],
             cost="$0",
-            cost_detail="模型本機跑,57,833 張 embedding 已 cache 在 SQLite",
+            cost_detail="完全本機,無 API 依賴",
             time="~1 秒",
             time_detail="cache 載一次後查詢即時",
-            badges=["離線可用", "MPS 加速", "57k 圖 cache"],
+            badges=["離線可用", "MPS 加速", "推薦設計師"],
         )
-        with gr.Tabs():
-            # ----- Tab A -----
-            with gr.Tab("📸 上傳圖找設計師"):
-                gr.HTML('<div class="demo-hint">💡 <strong>怎麼玩</strong>:上傳一張你喜歡的居家照片,AI 比對 135 位設計師作品的「風格指紋」,推薦最對味的 5 位設計師。</div>')
-                with gr.Row():
-                    with gr.Column(scale=1, elem_classes=["demo-input-pane"]):
-                        in_img = gr.Image(type="pil", label="上傳你喜歡的居家照片", height=320)
-                        with gr.Row(elem_classes=["demo-cta"]):
-                            btn = gr.Button("🔍 找對味設計師", variant="primary", scale=2)
-                    with gr.Column(scale=2, elem_classes=["demo-output-pane"]):
-                        gr.Markdown("### 推薦設計師", elem_classes=["demo-section-title"])
-                        out_md = gr.Markdown()
-                btn.click(handle_upload, in_img, out_md)
 
-            # ----- Tab B -----
-            with gr.Tab("🎨 品味測驗"):
-                gr.HTML('<div class="demo-hint">💡 <strong>怎麼玩</strong>:從下方 30 張隨機案例中,點選你喜歡的(可多選),系統會把這些圖平均成你的「品味指紋」,推薦最對味設計師。</div>')
-                state_selected = gr.State([])
-                state_urls = gr.State([])
-                gallery = gr.Gallery(label="點圖加入 / 取消選擇", columns=6, height=480, object_fit="cover")
-                with gr.Row():
-                    with gr.Column(elem_classes=["demo-cta"]):
-                        reco_btn = gr.Button("💡 看 AI 推薦", variant="primary")
-                    with gr.Column(elem_classes=["demo-secondary"]):
-                        refresh_btn = gr.Button("🔄 換一批")
-                    with gr.Column(elem_classes=["demo-secondary"]):
-                        clear_btn = gr.Button("🧹 清空已選")
-                selected_label = gr.Markdown("**已選 0 張**")
-                out_md_b = gr.Markdown()
+        gr.HTML('<div class="demo-hint">💡 <strong>怎麼玩</strong>:上傳一張你喜歡的居家照片(從 Pinterest、IG 收藏的、自家現況都可以),AI 用 135 位設計師作品的平均向量(風格指紋)跟它比較,推薦相似度最高的前 5 位設計師。<br/>📌 想用「刷卡選圖」找設計師的話,請改去 <strong>🧬 風格 DNA Tinder</strong>(更精緻互動 + 完整品味分析)。</div>')
 
-                def load_gallery():
-                    cache = _load_cache()
-                    if cache is None:
-                        return gr.update(value=[]), [], [], "⚠ 找不到 cache,先跑 build script"
-                    urls = sample_taste_test_images(cache, n=30)
-                    return gr.update(value=urls), urls, [], "**已選 0 張**"
+        with gr.Row():
+            with gr.Column(scale=1, elem_classes=["demo-input-pane"]):
+                in_img = gr.Image(type="pil", label="上傳你喜歡的居家照片", height=360)
+                with gr.Row(elem_classes=["demo-cta"]):
+                    btn = gr.Button("🔍 找對味設計師", variant="primary", scale=2)
+            with gr.Column(scale=2, elem_classes=["demo-output-pane"]):
+                gr.Markdown("### 對味設計師 Top 5", elem_classes=["demo-section-title"])
+                out_md = gr.Markdown()
 
-                def toggle(evt: gr.SelectData, selected: list[int]):
-                    idx = evt.index
-                    if idx in selected:
-                        selected.remove(idx)
-                    else:
-                        selected.append(idx)
-                    return selected, f"**已選 {len(selected)} 張**"
-
-                def clear_sel():
-                    return [], "**已選 0 張**", ""
-
-                demo.load(load_gallery, None, [gallery, state_urls, state_selected, selected_label])
-                refresh_btn.click(load_gallery, None, [gallery, state_urls, state_selected, selected_label])
-                gallery.select(toggle, state_selected, [state_selected, selected_label])
-                reco_btn.click(taste_recommend, [state_selected, state_urls], out_md_b)
-                clear_btn.click(clear_sel, None, [state_selected, selected_label, out_md_b])
+        btn.click(handle_upload, in_img, out_md)
 
     return demo
