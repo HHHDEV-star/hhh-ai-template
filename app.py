@@ -17,14 +17,17 @@ import gradio as gr
 
 from demos import (
     alternatives, budget_therapist, case_seo, color_dna, dna_tinder,
-    empty_room, object_qa, render, segment_3d, style_fingerprint, style_map,
-    walkthrough,
+    empty_room, full_plan, object_qa, photo_enhancer, render, segment_3d,
+    style_fingerprint, style_map, walkthrough,
 )
 from demos._ui import GLOBAL_CSS
 
 
 # === Demo 分類 ===
 DEMOS_BY_CATEGORY = [
+    ("🌟 旗艦體驗 · Flagship", [
+        ("🏗️", "3 分鐘完整翻新計畫", full_plan.build),
+    ]),
     ("互動式 AI · Interactive", [
         ("🧬", "風格 DNA Tinder",  dna_tinder.build),
         ("💸", "預算焦慮治療師",   budget_therapist.build),
@@ -37,6 +40,7 @@ DEMOS_BY_CATEGORY = [
     ]),
     ("內容生成 · Generative", [
         ("🎨", "AI 室內設計師",    render.build),
+        ("📸", "AI 數位攝影師",    photo_enhancer.build),
         ("🚶", "案例沉浸漫遊",     walkthrough.build),
         ("✍️", "AI 案例文案/SEO",  case_seo.build),
         ("🪄", "一鍵空房",         empty_room.build),
