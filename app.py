@@ -30,7 +30,7 @@ DEMOS_BY_CATEGORY = [
         ("🏠", "Welcome",                   welcome.build),
     ]),
     ("🌟 旗艦體驗 · Flagship", [
-        ("🕰️", "我家 Time Machine (10 年)", time_machine.build),
+        ("🕰️", "我家 Time Machine", time_machine.build),
         ("🏗️", "3 分鐘完整翻新計畫",        full_plan.build),
     ]),
     ("互動式 AI · Interactive", [
