@@ -297,7 +297,7 @@ def build() -> gr.Blocks:
                 summary_md = gr.Markdown()
             with gr.Column(scale=2, elem_classes=["demo-output-pane"]):
                 gr.Markdown("### 2D 平面圖", elem_classes=["demo-section-title"])
-                plan_img = gr.Image(label=None, show_label=False, height=560, type="pil", interactive=False)
+                plan_img = gr.Image(label=None, show_label=False, height=480, type="pil", interactive=False)
                 detail_md = gr.Markdown()
                 with gr.Accordion("🔬 原始 JSON layout (給工程師看)", open=False):
                     raw_json = gr.Code(language="json", label=None)

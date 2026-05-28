@@ -311,13 +311,11 @@ def build() -> gr.Blocks:
 
                 gr.Markdown("### 5 個時段細看", elem_classes=["demo-section-title"])
                 with gr.Row():
-                    img_now = gr.Image(type="pil", label="📅 現在", height=240, interactive=False)
-                    img_1y = gr.Image(type="pil", label="⏱️ 1 年後", height=240, interactive=False)
-                    img_3y = gr.Image(type="pil", label="📆 3 年後", height=240, interactive=False)
-                with gr.Row():
-                    img_5y = gr.Image(type="pil", label="🗓️ 5 年後", height=240, interactive=False)
-                    img_10y = gr.Image(type="pil", label="⏳ 10 年後", height=240, interactive=False)
-                    gr.HTML('<div style="height:240px"></div>')  # spacer 維持對齊
+                    img_now = gr.Image(type="pil", label="📅 現在",     height=220, interactive=False)
+                    img_1y  = gr.Image(type="pil", label="⏱️ 1 年後",   height=220, interactive=False)
+                    img_3y  = gr.Image(type="pil", label="📆 3 年後",   height=220, interactive=False)
+                    img_5y  = gr.Image(type="pil", label="🗓️ 5 年後",   height=220, interactive=False)
+                    img_10y = gr.Image(type="pil", label="⏳ 10 年後",  height=220, interactive=False)
 
                 gr.Markdown("### 10 年成長故事", elem_classes=["demo-section-title"])
                 story_md = gr.Markdown()

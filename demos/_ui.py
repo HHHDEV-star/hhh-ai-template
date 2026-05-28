@@ -440,6 +440,305 @@ GLOBAL_CSS = """
     font-size: 13px;
 }
 .demo-empty .icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+
+/* ============================================================
+ *  全域防破版 / 排版整理
+ * ============================================================ */
+
+/* 主內容 column 內距更舒服 */
+.gradio-container .block { box-sizing: border-box; }
+
+/* 圖片元件:避免上傳框跟結果框高度不一致導致 row 破版 */
+.gradio-container .image-frame { overflow: hidden !important; }
+.gradio-container .image-container img { max-width: 100% !important; height: auto !important; }
+
+/* Gallery 不要被 max-height 限制爛 */
+.gradio-container .gallery-container { max-height: none !important; }
+.gradio-container .gallery-container > div { box-sizing: border-box; }
+
+/* Markdown 標題不要太大喧賓奪主 */
+.gradio-container .markdown h3 { font-size: 16px !important; margin: 14px 0 8px !important; }
+.gradio-container .markdown h4 { font-size: 14px !important; margin: 10px 0 6px !important; }
+.gradio-container .markdown table {
+    width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px;
+}
+.gradio-container .markdown table th,
+.gradio-container .markdown table td {
+    border: 1px solid #e2e8f0; padding: 6px 10px; text-align: left;
+}
+.gradio-container .markdown table th { background: #f8fafc; font-weight: 600; }
+.gradio-container .markdown blockquote {
+    border-left: 3px solid #cbd5e1;
+    padding: 4px 12px; margin: 8px 0;
+    color: #475569; font-style: italic;
+    background: #f8fafc; border-radius: 4px;
+}
+
+/* Code block 美化 */
+.gradio-container .markdown code {
+    background: #f1f5f9; color: #0f172a;
+    padding: 2px 6px; border-radius: 4px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+}
+.gradio-container .markdown pre {
+    background: #0f172a; color: #e2e8f0;
+    padding: 12px 16px; border-radius: 8px;
+    overflow-x: auto; font-size: 12.5px;
+    line-height: 1.6;
+}
+
+/* 進階 accordion 收起時更低調 */
+.gradio-container .demo-advanced .label-wrap { padding: 8px 12px !important; }
+
+/* CTA + secondary 在 row 內保持平均 */
+.gradio-container .demo-cta, .gradio-container .demo-secondary { padding: 0 !important; }
+
+/* Dark mode tweaks */
+@media (prefers-color-scheme: dark) {
+    .gradio-container .markdown table th,
+    .gradio-container .markdown table td { border-color: #334155; }
+    .gradio-container .markdown table th { background: #0f172a; }
+    .gradio-container .markdown blockquote {
+        background: #1e293b; color: #94a3b8; border-color: #475569;
+    }
+    .gradio-container .markdown code { background: #1e293b; color: #e2e8f0; }
+}
+
+/* ============================================================
+ *  Welcome / Landing 頁專用
+ * ============================================================ */
+.welcome-page { padding: 0 4px; }
+
+.welcome-hero {
+    background: linear-gradient(135deg, #0b1220 0%, #1a2436 60%, #2a3a55 100%);
+    border-radius: 20px;
+    padding: 56px 48px;
+    color: #f8fafc;
+    margin-bottom: 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.welcome-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 20%, rgba(59,130,246,0.18) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(236,72,153,0.12) 0%, transparent 50%);
+    pointer-events: none;
+}
+.welcome-hero-content { position: relative; z-index: 2; }
+.welcome-mark {
+    width: 64px; height: 64px;
+    margin: 0 auto 20px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 32px; font-weight: 800;
+    letter-spacing: -0.04em;
+    box-shadow: 0 12px 32px -8px rgba(59,130,246,0.5);
+}
+.welcome-h1 {
+    font-size: 38px !important;
+    font-weight: 800 !important;
+    margin: 0 0 10px 0 !important;
+    letter-spacing: -0.03em;
+    color: #f8fafc !important;
+    line-height: 1.1;
+}
+.welcome-sub {
+    font-size: 16px;
+    color: #cbd5e1;
+    margin: 0 0 22px;
+    letter-spacing: 0.01em;
+}
+.welcome-meta {
+    display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    max-width: 800px; margin: 0 auto;
+}
+.welcome-pill {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: #e2e8f0;
+    font-weight: 500;
+}
+.welcome-pill .dot {
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; background: #22c55e;
+    margin-right: 5px; vertical-align: 1px;
+    box-shadow: 0 0 8px #22c55e;
+}
+
+/* How to use steps */
+.welcome-howto {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+}
+@media (max-width: 800px) { .welcome-howto { grid-template-columns: 1fr; } }
+.howto-step {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex; align-items: center; gap: 14px;
+    font-size: 13.5px;
+    color: #334155;
+    line-height: 1.5;
+}
+.howto-step strong { color: #0f172a; }
+.howto-num {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+/* Category title */
+.welcome-cat-title {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 28px 0 12px 0 !important;
+    padding-left: 12px;
+    border-left: 4px solid #3b82f6;
+}
+
+/* Demo cards grid */
+.welcome-category { margin-bottom: 8px; }
+.welcome-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}
+.welcome-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+.welcome-card:hover {
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 16px -4px rgba(15,23,42,0.08);
+}
+.welcome-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+}
+.welcome-icon {
+    font-size: 28px;
+    line-height: 1;
+}
+.welcome-cost {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 500;
+    background: #f1f5f9;
+    padding: 3px 10px;
+    border-radius: 999px;
+}
+.welcome-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+}
+.welcome-tag {
+    font-size: 12.5px;
+    color: #64748b;
+    line-height: 1.5;
+    min-height: 38px;
+}
+.welcome-badges {
+    margin-top: 10px;
+    display: flex; gap: 5px; flex-wrap: wrap;
+}
+.welcome-badge {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 10.5px;
+    font-weight: 500;
+}
+
+/* Tech stack section */
+.welcome-stack { margin-top: 28px; }
+.stack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+}
+.stack-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #3b82f6;
+    border-radius: 8px;
+    padding: 12px 16px;
+}
+.stack-item strong {
+    display: block;
+    font-size: 12px;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+.stack-item span {
+    font-size: 12.5px;
+    color: #475569;
+    line-height: 1.5;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Footer */
+.welcome-footer {
+    margin-top: 32px;
+    padding: 20px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 12px;
+    border-top: 1px solid #e2e8f0;
+}
+.welcome-sub-small {
+    margin-top: 6px;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* Dark mode for welcome */
+@media (prefers-color-scheme: dark) {
+    .howto-step { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+    .howto-step strong { color: #f1f5f9; }
+    .welcome-cat-title { color: #f1f5f9 !important; }
+    .welcome-card { background: #1e293b; border-color: #334155; }
+    .welcome-card:hover { border-color: #475569; }
+    .welcome-name { color: #f8fafc; }
+    .welcome-tag { color: #94a3b8; }
+    .welcome-cost { background: #0f172a; color: #cbd5e1; }
+    .welcome-badge { background: #0f172a; border-color: #334155; color: #94a3b8; }
+    .stack-item { background: #1e293b; border-color: #334155; }
+    .stack-item strong { color: #f1f5f9; }
+    .stack-item span { color: #94a3b8; }
+    .welcome-footer { color: #64748b; border-color: #334155; }
+}
 """
 
 
